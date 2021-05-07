@@ -1,0 +1,85 @@
+<html>
+  <head>
+    <title>WebRTC SDK - test page</title>
+    <script src="https://sdk-cdn.mypurecloud.com/javascript/latest/purecloud-platform-client-v2.min.js"></script>
+    <script src="https://sdk-cdn.mypurecloud.com/webrtc-sdk/genesys-cloud-webrtc-sdk.bundle.min.js"></script>
+
+    <!-- 
+      Documentation:
+      https://developer.mypurecloud.ie/api/rest/client-libraries/javascript/
+      https://github.com/MyPureCloud/platform-client-sdk-javascript
+      https://github.com/mypurecloud/genesys-cloud-webrtc-sdk/blob/HEAD/doc/index.md 
+    -->
+
+    <script>
+      const platformClient = require('platformClient');
+
+      const client = platformClient.ApiClient.instance;
+      const redirectUri = location.toString().replace(location.search, '');
+      const clientId = ''; // TODO: Put your client id here.
+      const environment = 'mypurecloud.ie'; // TODO: Put your region here, e.g. "mypurecloud.ie"."mypurecloud.ie"
+      console.log('Settings: ', redirectUri, clientId, environment);
+      client.setPersistSettings(true);
+      client.setEnvironment(environment);
+      client
+        .loginImplicitGrant(clientId, redirectUri)
+        .then(() => {
+          const accessToken = client.authData.accessToken;
+          console.log('User is authorized: ', accessToken);
+
+          let options = {
+            accessToken,
+            environment,
+            defaults: { monitorMicVolume: true },
+          };
+          const sdk = new window.GenesysCloudWebrtcSdk(options);
+
+          sdk.on('sdkError', (event) => {
+            console.log('sdkError: ', event);
+          });
+          sdk.on('pendingSession', (event) => {
+            console.log('pendingSession: ', event);
+          });
+          sdk.on('sessionStarted', (event) => {
+            console.log('sessionStarted: ', event);
+          });
+
+          sdk.initialize().then(() => {
+            console.log('Web RTC initialized', client.accessToken);
+          });
+        })
+        .catch((err) => {
+          console.error(err);
+        });
+
+      function placeCall() {
+        console.log('placeCall()');
+        const phoneNumber = document.getElementById('phoneNumber').value;
+        console.log('phoneNumbe: ', phoneNumber);
+        if (!phoneNumber || phoneNumber === '') {
+          alert('Enter a phone number');
+          return;
+        }
+
+        let apiInstance = new platformClient.ConversationsApi();
+        apiInstance
+          .postConversationsCalls({ phoneNumber })
+          .then((data) => {
+            console.log(`postConversationsCalls success! data: ${JSON.stringify(data, null, 2)}`);
+          })
+          .catch((err) => {
+            console.log('There was a failure calling postConversationsCalls');
+            console.error(err);
+          });
+      }
+    </script>
+  </head>
+  <body style="text-align: center">
+    <br /><br />
+    Phone number:
+    <br />
+    <input type="tel" id="phoneNumber" />
+    <br /><br />
+    <input type="button" value="Place a new call" onclick="placeCall()" />
+  </body>
+</html>
